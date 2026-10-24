@@ -108,20 +108,13 @@ def make_bar_chart(
     extra_blank: str = '',
 ) -> str:
     bar_chart = f'{prefix}: '
-    reserved = wcslen(extra_text) + wcslen(extra_blank) + 1 if extra_text else 0
-    if percent != NA and not (isinstance(percent, float) and not math.isfinite(percent)):
+    filled = percent != NA and not (isinstance(percent, float) and not math.isfinite(percent))
+    if filled:
         if isinstance(percent, str) and percent.endswith('%'):
             percent = percent.replace('%', '')
             percent = float(percent) if '.' in percent else int(percent)
         percentage = max(0.0, min(float(percent) / 100.0, 1.0))
-        quotient, remainder = divmod(
-            max(1, round(8 * (width - wcslen(bar_chart) - 7 - reserved) * percentage)),
-            8,
-        )
-        bar_chart += '█' * quotient
-        if remainder > 0:
-            bar_chart += ' ▏▎▍▌▋▊▉'[remainder]
-        if isinstance(percent, float) and wcslen(f'{bar_chart} {percent:.1f}%') <= width:
+        if isinstance(percent, float) and wcslen(bar_chart) + 9 <= width:
             text = f'{percent:.1f}%'
         else:
             text = f'{min(round(percent), 100):d}%'.replace('100%', 'MAX')  # type: ignore[arg-type]
@@ -134,15 +127,34 @@ def make_bar_chart(
             and wcslen(bar_chart) + wcslen(extra_text) + 2 <= width
         ):
             text, extra_text = extra_text, ''
-        bar_chart += '░' * max(0, width - wcslen(bar_chart) - wcslen(text) - 1)
+
+    tail = text
     if extra_text:
-        if wcslen(f'{bar_chart} {text} {extra_blank}{extra_text}') <= width:
-            if swap_text:
-                text, extra_text = extra_text, text
-            head = f'{bar_chart} {text}'
-            head += ' ' * max(0, width - wcslen(extra_blank) - wcslen(extra_text) - 1 - wcslen(head))
-            return f'{head} {extra_blank}{extra_text}'
-        if wcslen(f'{bar_chart} {extra_text}') <= width and swap_text:
-            return f'{bar_chart} {extra_text}' + ' ' * max(0, width - wcslen(bar_chart) - wcslen(extra_text) - 1)
-    head = f'{bar_chart} {text}'
-    return head + ' ' * max(0, width - wcslen(head))
+        tail = (
+            f'{extra_text} {extra_blank}{text}'
+            if swap_text
+            else f'{text} {extra_blank}{extra_text}'
+        )
+    tail = tail.rstrip()
+    tail_width = wcslen(tail)
+    right_margin = 1
+    if wcslen(bar_chart) + tail_width + 2 + right_margin > width:
+        tail = text
+        tail_width = wcslen(tail)
+    if wcslen(bar_chart) + tail_width + 2 + right_margin > width:
+        tail = tail[: max(1, width - wcslen(bar_chart) - 2 - right_margin)]
+        tail_width = wcslen(tail)
+
+    bar_area = max(1, width - wcslen(bar_chart) - tail_width - 1 - right_margin)
+    if filled:
+        quotient, remainder = divmod(max(1, round(8 * bar_area * percentage)), 8)
+        quotient = min(quotient, bar_area)
+        bar = '█' * quotient
+        if remainder > 0 and quotient < bar_area:
+            bar += ' ▏▎▍▌▋▊▉'[remainder]
+    else:
+        bar = '░' * bar_area
+
+    used = wcslen(bar_chart) + wcslen(bar)
+    padding = max(0, width - right_margin - used - tail_width)
+    return f'{bar_chart}{bar}{" " * padding}{tail}{" " * right_margin}'

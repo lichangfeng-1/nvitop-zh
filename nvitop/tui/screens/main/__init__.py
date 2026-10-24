@@ -190,8 +190,8 @@ class MainScreen(BaseSelectableScreen):  # pylint: disable=too-many-instance-att
         if not self.visible or self.root.termsize is None:
             return
         n_lines, n_cols = self.root.termsize
-        footer_y = n_lines - 1
-        if footer_y < self.y + self.height:
+        footer_y = self.y + self.height
+        if footer_y >= n_lines:
             return
         footer = ' 使用：g 八卡曲线 | a 自动 / f 完整 / c 紧凑 | h 帮助 | q 退出 '
         self.addstr(footer_y, self.x, footer)
