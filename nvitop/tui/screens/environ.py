@@ -222,6 +222,7 @@ class EnvironScreen(BaseScreen):  # pylint: disable=too-many-instance-attributes
 
         return termsize
 
+    # pylint: disable-next=too-many-locals
     def draw(self) -> None:
         self.color_reset()
 
