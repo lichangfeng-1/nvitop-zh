@@ -19,9 +19,17 @@ from nvitop.tui.library import (
     cut_string,
     make_bar_chart,
     ttl_cache,
+    wcslen,
 )
 from nvitop.tui.screens.main.panels.base import BasePanel
 from nvitop.version import __version__
+
+
+def _pad_display(text: str, width: int, align: str = 'left') -> str:
+    padding = max(0, width - wcslen(text))
+    if align == 'right':
+        return ' ' * padding + text
+    return text + ' ' * padding
 
 
 if TYPE_CHECKING:
@@ -100,10 +108,27 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 '│ {memory_usage:>20} │ {gpu_utilization_string:>7}  {compute_mode:>11} │'
             ),
         ]
+        self.formats_compact_bars: list[str] = [
+            (
+                '│ {physical_index:>3} {fan_speed_string:>3} {temperature_string:>4} '
+                '{performance_state:<3}{power_status:>13} '
+                '│ {memory_usage:>20} │ {pcie_status_string:>20} │'
+            ),
+        ]
         self.formats_full: list[str] = [
             (
                 '│ {physical_index:>3}  {name:<19} {persistence_mode:>4} '
-                '│ {bus_id:<16} {display_active:>3} │ {total_volatile_uncorrected_ecc_errors:>20} │'
+                '│ {bus_id:<16} {display_active:>3} │ {pcie_status_string:>20} │'
+            ),
+            (
+                '│ {fan_speed_string:>3}  {temperature_string:>4}  {performance_state:^4} {power_status:>13} '
+                '│ {memory_usage:>20} │ {compute_mode:>20} │'
+            ),
+        ]
+        self.formats_full_nobars: list[str] = [
+            (
+                '│ {physical_index:>3}  {name:<19} {persistence_mode:>4} '
+                '│ {bus_id:<16} {display_active:>3} │ {pcie_status_string:>20} │'
             ),
             (
                 '│ {fan_speed_string:>3}  {temperature_string:>4}  {performance_state:^4} {power_status:>13} '
@@ -119,10 +144,11 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         ]
 
         if IS_WINDOWS:
-            self.formats_full[0] = self.formats_full[0].replace(
-                'persistence_mode',
-                'current_driver_model',
-            )
+            for formats in (self.formats_full, self.formats_full_nobars):
+                formats[0] = formats[0].replace(
+                    'persistence_mode',
+                    'current_driver_model',
+                )
 
         self.support_mig: bool = any('N/A' not in device.mig_mode for device in self.snapshots)
         if self.support_mig:
@@ -131,10 +157,11 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 '{mig_mode:>8}  {total_volatile_uncorrected_ecc_errors:>10}',
             )
         if all(len(device.power_status.rpartition(' / ')[-1]) < 5 for device in self.snapshots):
-            self.formats_compact[0] = self.formats_compact[0].replace(
-                'performance_state:<3',
-                'performance_state:>3',
-            )
+            for formats in (self.formats_compact, self.formats_compact_bars):
+                formats[0] = formats[0].replace(
+                    'performance_state:<3',
+                    'performance_state:>3',
+                )
 
     @property
     def width(self) -> int:
@@ -225,37 +252,61 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             compact = self.compact
 
         version_infos = [
-            'NVITOP {}'.format(__version__.partition('+')[0]),
-            f'Driver Version: {self.driver_version}',
-            f'CUDA Driver Version: {self.cuda_driver_version}',
+            'NVITOP-zh {}'.format(__version__.partition('+')[0]),
+            f'驱动/Driver: {self.driver_version}',
+            f'CUDA驱动: {self.cuda_driver_version}',
         ]
-        if sum(len(v) for v in version_infos) % 2 == 0:
+        if sum(wcslen(v) for v in version_infos) % 2 == 0:
             version_infos[0] += ' '
-        version_seps = ' ' * max(2, (75 - sum(len(v) for v in version_infos)) // 2)
+        version_seps = ' ' * max(2, (75 - sum(wcslen(v) for v in version_infos)) // 2)
+        version_line = version_seps.join(version_infos)
 
         header = [
             '╒═════════════════════════════════════════════════════════════════════════════╕',
-            '│ {} │'.format(version_seps.join(version_infos).ljust(75, ' ')),
+            '│ ' + _pad_display(version_line, 75) + ' │',
         ]
+
+        def row(cells: tuple[tuple[str, int], ...]) -> str:
+            return '│' + '│'.join(_pad_display(text, width) for text, width in cells) + '│'
+
         if self.device_count > 0:
             header.append(
                 '├───────────────────────────────┬──────────────────────┬──────────────────────┤',
             )
             if compact:
+                third = (
+                    (' PCIe 档位/速率 ', 22)
+                    if self.width >= 100
+                    else (' 利用/UTL 模式/MODE ', 22)
+                )
                 header.append(
-                    '│ GPU Fan Temp Perf Pwr:Usg/Cap │         Memory-Usage │ GPU-Util  Compute M. │',
+                    row(
+                        (
+                            (' GPU 风FAN 温TEMP 性PERF 功PWR ', 31),
+                            (' 显存/MEM 用量 ', 22),
+                            third,
+                        ),
+                    ),
                 )
             else:
                 header.extend(
                     (
-                        '│ GPU  Name        Persistence-M│ Bus-Id        Disp.A │ Volatile Uncorr. ECC │',
-                        '│ Fan  Temp  Perf  Pwr:Usage/Cap│         Memory-Usage │ GPU-Util  Compute M. │',
+                        row(
+                            (
+                                (' GPU 型号/Name     驱动/Mode ', 31),
+                                (' 总线/Bus  显示/Disp ', 22),
+                                (' PCIe 档位/速率 ', 22),
+                            ),
+                        ),
+                        row(
+                            (
+                                (' 风扇FAN 温TEMP 性PERF 功PWR ', 31),
+                                (' 显存/MEM 用量 ', 22),
+                                (' 计算模式/Compute ', 22),
+                            ),
+                        ),
                     ),
                 )
-                if IS_WINDOWS:
-                    header[-2] = header[-2].replace('Persistence-M', '    TCC/WDDM ')
-                if self.support_mig:
-                    header[-2] = header[-2].replace('Volatile Uncorr. ECC', 'MIG M.   Uncorr. ECC')
             header.append(
                 '╞═══════════════════════════════╪══════════════════════╪══════════════════════╡',
             )
@@ -263,7 +314,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             header.extend(
                 (
                     '╞═════════════════════════════════════════════════════════════════════════════╡',
-                    '│  No visible devices found                                                   │',
+                    '│ ' + _pad_display('未发现可见 GPU / No visible devices found', 75) + ' │',
                     '╘═════════════════════════════════════════════════════════════════════════════╛',
                 ),
             )
@@ -321,18 +372,20 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         self.color_reset()
 
         if self.need_redraw:
-            self.addstr(self.y, self.x, '(Press h for help or q to quit)'.rjust(79))
-            self.color_at(self.y, self.x + 55, width=1, fg='magenta', attr='bold | italic')
-            self.color_at(self.y, self.x + 69, width=1, fg='magenta', attr='bold | italic')
+            hint = '(按 h 帮助 / Help | q 退出 / Quit)'
+            hint_x = self.x + max(0, 79 - wcslen(hint))
+            self.addstr(self.y, hint_x, hint)
             for y, line in enumerate(self.frame_lines(), start=self.y + 1):
                 self.addstr(y, self.x, line)
 
         self.addstr(self.y, self.x, cut_string(time.strftime('%a %b %d %H:%M:%S %Y'), maxlen=32))
 
-        formats = self.formats_compact if self.compact else self.formats_full
-
         remaining_width = self.width - 79
         draw_bars = self.width >= 100
+        if self.compact:
+            formats = self.formats_compact_bars if draw_bars else self.formats_compact
+        else:
+            formats = self.formats_full if draw_bars else self.formats_full_nobars
         try:
             selected_device = self.parent.selection.process.device  # type: ignore[union-attr]
         except AttributeError:
@@ -358,10 +411,22 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
 
             fmts = self.mig_formats if device.is_mig_device else formats
             for y, fmt in enumerate(fmts, start=y_start):
-                self.addstr(y, self.x, fmt.format(**device.__dict__))
+                line = fmt.format(**device.__dict__)
+                self.addstr(y, self.x, line)
                 self.color_at(y, self.x + 1, width=31, fg=device.display_color, attr=attr)
                 self.color_at(y, self.x + 33, width=22, fg=device.display_color, attr=attr)
                 self.color_at(y, self.x + 56, width=22, fg=device.display_color, attr=attr)
+                temperature_string = device.temperature_string
+                offset = line.find(temperature_string)
+                if offset >= 0:
+                    temperature = device.temperature
+                    self.color_at(
+                        y,
+                        self.x + offset,
+                        width=len(temperature_string),
+                        fg=device.temperature_display_color,
+                        attr='bold' if isinstance(temperature, int) and temperature >= 85 else attr,
+                    )
 
             if draw_bars:
                 left_width = (remaining_width - 6 + 1) // 2 - 1
@@ -384,6 +449,12 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                         self.addstr(y_start - 1, self.x + 80 + left_width + 1, '┴')
                 elif self.compact:
                     if remaining_width >= 44:
+                        sm_clock = device.clock_infos.sm
+                        clock_text = (
+                            f'{sm_clock / 1000:.1f}G'
+                            if isinstance(sm_clock, (int, float))
+                            else 'N/A'
+                        )
                         matrix = [
                             [
                                 (
@@ -392,7 +463,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'MEM',
                                     device.memory_percent,
                                     device.memory_display_color,
-                                    device.memory_used_human,
+                                    '',
                                 ),
                                 (
                                     self.x + 80 + left_width + 3,
@@ -400,7 +471,8 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'@ {device.clock_infos.sm}MHz',
+                                    f'{clock_text} '
+                                    f'{device.power_status.partition(" / ")[0]}',
                                 ),
                             ],
                         ]
@@ -425,50 +497,34 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                         ]
                 else:
                     if remaining_width >= 44:
+                        memory_utilization = device.memory_utilization
+                        memory_extra = device.memory_used_human
+                        if isinstance(memory_utilization, (int, float)):
+                            memory_extra += f' BW {memory_utilization:.0f}%'
+                        memory_extra += f' {device.clock_infos.memory}MHz'
                         matrix = [
                             [
                                 (
                                     self.x + 80,
-                                    left_width,
+                                    remaining_width - 3,
                                     'MEM',
                                     device.memory_percent,
                                     device.memory_display_color,
-                                    device.memory_used_human,
-                                ),
-                                (
-                                    self.x + 80 + left_width + 3,
-                                    right_width,
-                                    'MBW',
-                                    device.memory_utilization,
-                                    device.bandwidth_display_color,
-                                    f'@ {device.clock_infos.memory}MHz',
+                                    memory_extra,
                                 ),
                             ],
                             [
                                 (
                                     self.x + 80,
-                                    left_width,
+                                    remaining_width - 3,
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'@ {device.clock_infos.sm}MHz',
-                                ),
-                                (
-                                    self.x + 80 + left_width + 3,
-                                    right_width,
-                                    'PWR',
-                                    device.power_utilization,
-                                    device.power_display_color,
-                                    f'{device.power_status.partition(" / ")[0]}',
+                                    f'{device.power_status} '
+                                    f'{device.clock_infos.sm}/{device.max_clock_infos.sm}MHz',
                                 ),
                             ],
                         ]
-                        separator = '┼' if index > 0 else '╤'
-                        if len(prev_device_index) == 2:
-                            separator = '┬'
-                        self.addstr(y_start - 1, self.x + 80 + left_width + 1, separator)
-                        if index == len(self.snapshots) - 1:
-                            self.addstr(y_start + 2, self.x + 80 + left_width + 1, '╧')
                     else:
                         matrix = [
                             [
@@ -488,7 +544,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'@ {device.clock_infos.sm}MHz',
+                                    f'{device.clock_infos.sm}/{device.max_clock_infos.sm}MHz',
                                 ),
                             ],
                         ]
@@ -500,7 +556,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                             utilization,
                             width=width,
                             extra_text=extra_text if 'N/A' not in extra_text else '',
-                            swap_text=not extra_text.endswith('MHz'),
+                            swap_text=False,
                             extra_blank=' ',
                         )
                         self.addstr(y, x_offset, f'{bar_chart} │')
@@ -632,7 +688,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                         device.gpu_utilization,
                                         device.gpu_display_color,
                                         left_width,
-                                        f'@ {device.clock_infos.sm}MHz',
+                                        f'{device.clock_infos.sm}/{device.max_clock_infos.sm}MHz',
                                     ),
                                     (
                                         'PWR',
@@ -668,7 +724,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                         device.gpu_utilization,
                                         device.gpu_display_color,
                                         remaining_width - 3,
-                                        f'@ {device.clock_infos.sm}MHz',
+                                        f'{device.clock_infos.sm}/{device.max_clock_infos.sm}MHz',
                                     ),
                                 ],
                             ]
@@ -679,7 +735,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                 utilization,
                                 width=width,
                                 extra_text=extra_text if 'N/A' not in extra_text else '',
-                                swap_text=not extra_text.endswith('MHz'),
+                                swap_text=False,
                                 extra_blank=' ',
                             )
                             lines[y] += f' {colored(bar_chart, color)} │'  # type: ignore[arg-type]

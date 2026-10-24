@@ -93,6 +93,8 @@ class Device(DeviceBase):  # pylint: disable=too-many-public-methods
         self._snapshot = super().as_snapshot()
         self._snapshot.tuple_index = self.tuple_index
         self._snapshot.display_index = self.display_index
+        self._snapshot.pcie_status_string = self.pcie_status_string()
+        self._snapshot.temperature_display_color = self.temperature_display_color()
         return self._snapshot
 
     @property
@@ -152,6 +154,35 @@ class Device(DeviceBase):  # pylint: disable=too-many-public-methods
     def temperature_string(self) -> str:  # in Celsius
         temperature = self.temperature()
         return f'{temperature}C' if libnvml.nvmlCheckReturn(temperature, int) else NA
+
+    def temperature_display_color(self) -> str:  # in Celsius
+        temperature = self.temperature()
+        if not libnvml.nvmlCheckReturn(temperature, int):
+            return 'white'
+        if temperature < 50:
+            return 'green'
+        if temperature < 70:
+            return 'yellow'
+        return 'red'
+
+    def pcie_status_string(self) -> str:
+        generation = self.pcie_link_generation()
+        width = self.pcie_link_width()
+
+        def rate(value: int | NaType) -> str:
+            if not libnvml.nvmlCheckReturn(value, int):
+                return NA
+            if value >= 1024:
+                return f'{value / 1024:.1f}M'
+            return f'{value:.0f}K'
+
+        link = (
+            f'PCIe{generation}x{width}'
+            if libnvml.nvmlCheckReturn(generation, int) and libnvml.nvmlCheckReturn(width, int)
+            else 'PCIe N/A'
+        )
+        status = f'{link} {rate(self.pcie_rx_throughput())}/{rate(self.pcie_tx_throughput())}'
+        return status if len(status) <= 20 else link
 
     def memory_loading_intensity(self) -> LoadingIntensity:
         return self.loading_intensity_of(self.memory_percent(), type='memory')

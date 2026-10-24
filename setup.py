@@ -105,7 +105,7 @@ if __name__ == '__main__':
                 ]
 
         setup(
-            name='nvitop',
+            name='nvitop-zh',
             version=version.__version__,
             extras_require=extra_requirements,
         )

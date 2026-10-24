@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from nvitop.tui.library import Device, MouseEvent
+from nvitop.tui.library import Device, MouseEvent, wcslen
 from nvitop.tui.screens.base import BaseScreen
 from nvitop.version import __version__
 
@@ -21,38 +21,38 @@ if TYPE_CHECKING:
 __all__ = ['HelpScreen']
 
 
-HELP_TEMPLATE = r"""nvitop {} - (C) Xuehai Pan, 2021-2026.
-Released under the GNU GPLv3 License.
+HELP_TEMPLATE = r"""nvitop-zh {} - 基于 nvitop, (C) Xuehai Pan, 2021-2026.
+GNU GPLv3 许可 / Released under the GNU GPLv3 License.
 
-GPU Process Type: C: Compute, G: Graphics, X: Mixed.
+进程类型 / GPU Process Type: C: 计算/Compute, G: 图形/Graphics, X: 混合/Mixed.
 
-Device coloring rules by loading intensity:
-  - GPU utilization: light < {:2d}% <= moderate < {:2d}% <= heavy.
-  - GPU-MEM percent: light < {:2d}% <= moderate < {:2d}% <= heavy.
+设备着色 / Device coloring 按负载强度 / by loading intensity:
+  - GPU 利用率 / GPU utilization: 轻 < {:2d}% <= 中 < {:2d}% <= 重.
+  - 显存占比 / GPU-MEM percent: 轻 < {:2d}% <= 中 < {:2d}% <= 重.
 
-      a f c: change display mode                h ?: show this help screen
-       F5 r: force refresh window                 q: quit
+      a f c: 切换显示模式 / change display mode      h ?: 本帮助 / help
+       F5 r: 强制刷新 / force refresh                 q: 退出 / quit
 
-     Arrows: scroll process list              Space: tag/untag current process
-       Home: select the first process           Esc: clear process selection
-        End: select the last process       Ctrl-C I: interrupt selected process
-                                                  K: kill selected process
-   Ctrl-A ^: scroll to left most                  T: terminate selected process
-   Ctrl-E $: scroll to right most                 e: show process environment
-   PageUp [: scroll entire screen up              t: toggle tree-view screen
- PageDown ]: scroll entire screen down        Enter: show process metrics
+     Arrows: 滚动进程 / scroll process list        Space: 标记/取消 / tag
+       Home: 首个进程 / first process               Esc: 清除选择 / clear
+        End: 最后进程 / last process       Ctrl-C I: 中断进程 / interrupt
+                                                  K: 杀死进程 / kill
+   Ctrl-A ^: 滚到最左 / scroll to left              T: 终止进程 / terminate
+   Ctrl-E $: 滚到最右 / scroll to right             e: 进程环境 / environment
+   PageUp [: 整屏上滚 / screen up                   t: 树状视图 / tree-view
+ PageDown ]: 整屏下滚 / screen down            Enter: 进程指标 / metrics
 
-      Wheel: scroll process list        Shift-Wheel: scroll horizontally
-        Tab: scroll process list         Ctrl-Wheel: fast scroll ({}x)
+      Wheel: 滚动进程 / scroll list        Shift-Wheel: 横向滚动 / horizontal
+        Tab: 滚动进程 / scroll list         Ctrl-Wheel: 快速滚动 / fast ({}x)
 
-      on oN: sort by GPU-INDEX
-      op oP: sort by PID                      ob oB: sort by %GMBW
-      ou oU: sort by USER                     oc oC: sort by %CPU
-      og oG: sort by GPU-MEM                  om oM: sort by %MEM
-      os oS: sort by %SM                      ot oT: sort by TIME
-        , .: select sort column                   /: invert sort order
+      on oN: 按 GPU 排序 / sort by GPU-INDEX
+      op oP: 按 PID 排序 / by PID                  ob oB: 按带宽 / by %GMBW
+      ou oU: 按用户 / by USER                      oc oC: 按 CPU / by %CPU
+      og oG: 按显存 / by GPU-MEM                   om oM: 按内存 / by %MEM
+      os oS: 按 SM / by %SM                        ot oT: 按时间 / by TIME
+        , .: 选择排序列 / select column               /: 反转排序 / invert order
 
-Press any key to return.
+按任意键返回 / Press any key to return.
 """
 
 
@@ -92,7 +92,7 @@ class HelpScreen(BaseScreen):  # pylint: disable=too-many-instance-attributes
         )
 
         self.x, self.y = root.x, root.y
-        self.width: int = max(map(len, self.infos))
+        self.width: int = max(map(wcslen, self.infos))
         self.height: int = len(self.infos)
 
     def draw(self) -> None:

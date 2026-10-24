@@ -24,6 +24,7 @@ from nvitop.tui.screens import (
     BaseScreen,
     BreakLoop,
     EnvironScreen,
+    GpuGraphsScreen,
     HelpScreen,
     MainScreen,
     ProcessMetricsScreen,
@@ -106,6 +107,11 @@ class TUI(DisplayableContainer[Union[BaseScreen, MessageBox]]):  # pylint: disab
             self.help_screen.visible = False
             self.help_screen.no_unicode = False
             self.add_child(self.help_screen)
+
+            self.graphs_screen: GpuGraphsScreen = GpuGraphsScreen(win=win, root=self)
+            self.graphs_screen.visible = False
+            self.graphs_screen.no_unicode = self.no_unicode
+            self.add_child(self.graphs_screen)
 
             if interval is not None:
                 if interval < 1.0:
@@ -321,9 +327,11 @@ class TUI(DisplayableContainer[Union[BaseScreen, MessageBox]]):  # pylint: disab
 
             self.previous_screen = self.current_screen
             self.current_screen = screen
+            self.need_redraw = True
 
         def show_main() -> None:
             target_screen = self.main_screen
+            self.graphs_screen.leave()
             show_screen(target_screen, focused=False)
 
             if self.treeview_screen.selection.is_set():
@@ -369,6 +377,10 @@ class TUI(DisplayableContainer[Union[BaseScreen, MessageBox]]):  # pylint: disab
         def show_help() -> None:
             show_screen(self.help_screen, focused=True)
 
+        def show_graphs() -> None:
+            self.graphs_screen.enter()
+            show_screen(self.graphs_screen, focused=True)
+
         def help_return() -> None:
             if self.previous_screen is self.treeview_screen:
                 show_treeview()
@@ -376,8 +388,16 @@ class TUI(DisplayableContainer[Union[BaseScreen, MessageBox]]):  # pylint: disab
                 show_environ()
             elif self.previous_screen is self.process_metrics_screen:
                 show_process_metrics()
+            elif self.previous_screen is self.graphs_screen:
+                show_graphs()
             else:
                 show_main()
+
+        self.keymaps.bind('main', 'g', show_graphs)
+        self.keymaps.bind('graphs', 'g', show_main)
+        self.keymaps.alias('graphs', 'g', '<Esc>')
+        self.keymaps.alias('graphs', 'g', 'q')
+        self.keymaps.alias('graphs', 'g', 'Q')
 
         self.keymaps.bind('main', 'e', show_environ)
         self.keymaps.bind('environ', 'e', environ_return)
@@ -398,7 +418,7 @@ class TUI(DisplayableContainer[Union[BaseScreen, MessageBox]]):  # pylint: disab
         self.keymaps.alias('process-metrics', '<Enter>', 'Q')
         self.keymaps.bind('process-metrics', 'e', show_environ)
 
-        for screen_name in ('main', 'treeview', 'environ', 'process-metrics'):
+        for screen_name in ('main', 'treeview', 'environ', 'process-metrics', 'graphs'):
             self.keymaps.bind(screen_name, 'h', show_help)
             self.keymaps.alias(screen_name, 'h', '?')
         self.keymaps.bind('help', '<Esc>', help_return)

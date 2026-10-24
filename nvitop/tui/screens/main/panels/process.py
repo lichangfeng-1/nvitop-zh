@@ -39,6 +39,10 @@ from nvitop.tui.library import (
 from nvitop.tui.screens.main.panels.base import BaseSelectablePanel
 
 
+def _pad_display(text: str, width: int) -> str:
+    return text + ' ' * max(0, width - wcslen(text))
+
+
 if TYPE_CHECKING:
     import curses
     from collections.abc import Callable, Iterable, Mapping
@@ -391,7 +395,7 @@ class ProcessPanel(BaseSelectablePanel):  # pylint: disable=too-many-instance-at
     def header_lines(self) -> list[str]:
         header = [
             '╒' + '═' * (self.width - 2) + '╕',
-            '│ {} │'.format('Processes:'.ljust(self.width - 4)),
+            '│ ' + _pad_display('进程/Processes:', self.width - 4) + ' │',
             r'│ GPU     PID      USER  GPU-MEM %SM %GMBW  {} │'.format(
                 '  '.join(self.host_headers).ljust(self.width - 46),
             ),
@@ -399,11 +403,13 @@ class ProcessPanel(BaseSelectablePanel):  # pylint: disable=too-many-instance-at
         ]
         if len(self.snapshots) == 0:
             if self.has_snapshots:
-                message = ' No running processes found{} '.format(' (in WSL)' if IS_WSL else '')
+                message = ' 无运行进程 / No running processes found{} '.format(
+                    ' (in WSL)' if IS_WSL else '',
+                )
             else:
-                message = ' Gathering process status...'
+                message = ' 正在采集进程状态... / Gathering process status...'
             header.extend(
-                [f'│ {message.ljust(self.width - 4)} │', '╘' + '═' * (self.width - 2) + '╛'],
+                ['│ ' + _pad_display(message, self.width - 4) + ' │', '╘' + '═' * (self.width - 2) + '╛'],
             )
         return header
 
@@ -453,9 +459,16 @@ class ProcessPanel(BaseSelectablePanel):  # pylint: disable=too-many-instance-at
 
         if self.need_redraw:
             if IS_SUPERUSER:
-                self.addstr(self.y, self.x + 1, '!CAUTION: SUPERUSER LOGGED-IN.')
+                caution = '!注意 CAUTION: 超级用户已登录 / SUPERUSER LOGGED-IN.'
+                self.addstr(self.y, self.x + 1, caution)
                 self.color_at(self.y, self.x + 1, width=1, fg='red', attr='blink')
-                self.color_at(self.y, self.x + 2, width=29, fg='yellow', attr='italic')
+                self.color_at(
+                    self.y,
+                    self.x + 2,
+                    width=max(0, wcslen(caution) - 2),
+                    fg='yellow',
+                    attr='italic',
+                )
 
             for y, line in enumerate(self.header_lines(), start=self.y + 1):
                 self.addstr(y, self.x, line)
@@ -632,8 +645,14 @@ class ProcessPanel(BaseSelectablePanel):  # pylint: disable=too-many-instance-at
                 self.selection.clear()
 
         elif self.has_snapshots:
-            message = ' No running processes found{} '.format(' (in WSL)' if IS_WSL else '')
-            self.addstr(self.y + 5, self.x, f'│ {message.ljust(self.width - 4)} │')
+            message = ' 无运行进程 / No running processes found{} '.format(
+                ' (in WSL)' if IS_WSL else '',
+            ).strip()
+            self.addstr(
+                self.y + 5,
+                self.x,
+                '│ ' + _pad_display(message, self.width - 4) + ' │',
+            )
 
         if self.root.readonly:
             return

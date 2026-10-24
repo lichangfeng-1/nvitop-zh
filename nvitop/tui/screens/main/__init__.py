@@ -17,6 +17,7 @@ from nvitop.tui.library import (
     MouseEvent,
     Selection,
     Snapshot,
+    wcslen,
 )
 from nvitop.tui.screens.base import BaseScreen, BaseSelectableScreen
 from nvitop.tui.screens.main.panels import DevicePanel, HostPanel, OrderName, ProcessPanel
@@ -185,6 +186,16 @@ class MainScreen(BaseSelectableScreen):  # pylint: disable=too-many-instance-att
         self.color_reset()
 
         super().draw()
+
+        if not self.visible or self.root.termsize is None:
+            return
+        n_lines, n_cols = self.root.termsize
+        footer_y = n_lines - 1
+        if footer_y < self.y + self.height:
+            return
+        footer = ' 使用：g 八卡曲线 | a 自动 / f 完整 / c 紧凑 | h 帮助 | q 退出 '
+        self.addstr(footer_y, self.x, footer)
+        self.color_at(footer_y, self.x, width=min(wcslen(footer), n_cols - 1), attr='dim')
 
     def print(self) -> None:
         if self.device_count > 0:

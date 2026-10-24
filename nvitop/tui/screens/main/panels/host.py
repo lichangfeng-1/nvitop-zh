@@ -22,6 +22,7 @@ from nvitop.tui.library import (
     host,
     make_bar_chart,
     timedelta2human,
+    wcslen,
 )
 from nvitop.tui.screens.main.panels.base import BasePanel
 
@@ -149,7 +150,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 baseline=0.0,
                 upperbound=100.0,
                 dynamic_bound=False,
-                format=lambda x: f'GPU {device.display_index} MEM: {percentage(x)}',
+                format=lambda x: f'GPU {device.display_index} 显存/MEM: {percentage(x)}',
             )(device.memory_percent)
             device.gpu_utilization = BufferedHistoryGraph(  # type: ignore[method-assign]
                 interval=1.0,
@@ -159,13 +160,13 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 baseline=0.0,
                 upperbound=100.0,
                 dynamic_bound=False,
-                format=lambda x: f'GPU {device.display_index} UTL: {percentage(x)}',
+                format=lambda x: f'GPU {device.display_index} 利用/UTL: {percentage(x)}',
             )(device.gpu_utilization)
 
         for device in self.devices:
             enable_history(device)
 
-        prefix = 'AVG ' if self.device_count > 1 else ''
+        prefix = '平均/AVG ' if self.device_count > 1 else ''
         self.average_gpu_memory_percent = BufferedHistoryGraph(
             interval=1.0,
             width=20,
@@ -174,7 +175,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             baseline=0.0,
             upperbound=100.0,
             dynamic_bound=False,
-            format=lambda x: f'{prefix}GPU MEM: {percentage(x)}',
+            format=lambda x: f'{prefix}显存/MEM: {percentage(x)}',
         )
         self.average_gpu_utilization = BufferedHistoryGraph(
             interval=1.0,
@@ -184,7 +185,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             baseline=0.0,
             upperbound=100.0,
             dynamic_bound=False,
-            format=lambda x: f'{prefix}GPU UTL: {percentage(x)}',
+            format=lambda x: f'{prefix}利用/UTL: {percentage(x)}',
         )
 
     @classmethod
@@ -278,19 +279,19 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
     def draw(self) -> None:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         self.color_reset()
 
-        load_average = 'Load Average: {} {} {}'.format(
+        load_average = '负载/Load: {} {} {}'.format(
             *(f'{value:5.2f}'[:5] if value < 10000.0 else '9999+' for value in self.load_average),
         )
 
         if self.compact:
-            width_right = len(load_average) + 4
+            width_right = wcslen(load_average) + 4
             width_left = self.width - 2 - width_right
             cpu_bar = '[ {} ]'.format(
                 make_bar_chart(
                     'CPU',
                     self.cpu_percent,
                     width_left - 4,
-                    extra_text=f'UPTIME: {timedelta2human(host.uptime(), round=True)}',
+                    extra_text=f'运行/Uptime: {timedelta2human(host.uptime(), round=True)}',
                     extra_blank=' ',
                 ),
             )
@@ -299,7 +300,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                     'MEM',
                     self.virtual_memory.percent,
                     width_left - 4,
-                    extra_text=f'USED: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
+                    extra_text=f'已用/Used: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
                     extra_blank=' ',
                 ),
             )
@@ -312,7 +313,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             )
             self.addstr(self.y, self.x, f'{cpu_bar}  ( {load_average} )')
             self.addstr(self.y + 1, self.x, f'{memory_bar}  {swap_bar}')
-            self.color_at(self.y, self.x, width=len(cpu_bar), fg='cyan', attr='bold')
+            self.color_at(self.y, self.x, width=wcslen(cpu_bar), fg='cyan', attr='bold')
             self.color_at(self.y + 1, self.x, width=width_left, fg='magenta', attr='bold')
             self.color_at(self.y, self.x + width_left + 2, width=width_right, attr='bold')
             self.color_at(
@@ -428,18 +429,18 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         self.swap_memory = host.swap_memory()
         self.load_average = host.load_average()
 
-        load_average = 'Load Average: {} {} {}'.format(
+        load_average = '负载/Load: {} {} {}'.format(
             *(f'{value:5.2f}'[:5] if value < 10000.0 else '9999+' for value in self.load_average),
         )
 
-        width_right = len(load_average) + 4
+        width_right = wcslen(load_average) + 4
         width_left = self.width - 2 - width_right
         cpu_bar = '[ {} ]'.format(
             make_bar_chart(
                 'CPU',
                 self.cpu_percent,
                 width_left - 4,
-                extra_text=f'UPTIME: {timedelta2human(host.uptime(), round=True)}',
+                extra_text=f'运行/Uptime: {timedelta2human(host.uptime(), round=True)}',
                 extra_blank=' ',
             ),
         )
@@ -448,7 +449,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 'MEM',
                 self.virtual_memory.percent,
                 width_left - 4,
-                extra_text=f'USED: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
+                extra_text=f'已用/Used: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
                 extra_blank=' ',
             ),
         )

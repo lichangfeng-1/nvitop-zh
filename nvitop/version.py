@@ -18,11 +18,11 @@
 
 # pylint: disable=invalid-name
 
-__version__ = '1.7.1'
+__version__ = '1.7.1+zh.1'
 __license__ = 'Apache-2.0 AND GPL-3.0-only'
 __author__ = __maintainer__ = 'Xuehai Pan'
 __email__ = 'XuehaiPan@pku.edu.cn'
-__release__ = False
+__release__ = True
 
 if not __release__:
     import subprocess

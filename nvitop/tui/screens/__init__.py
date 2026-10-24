@@ -5,6 +5,7 @@
 
 from nvitop.tui.screens.base import BaseScreen, BaseSelectableScreen
 from nvitop.tui.screens.environ import EnvironScreen
+from nvitop.tui.screens.graphs import GpuGraphsScreen
 from nvitop.tui.screens.help import HelpScreen
 from nvitop.tui.screens.main import BreakLoop, MainScreen
 from nvitop.tui.screens.metrics import ProcessMetricsScreen
@@ -16,6 +17,7 @@ __all__ = [
     'BaseSelectableScreen',
     'BreakLoop',
     'EnvironScreen',
+    'GpuGraphsScreen',
     'HelpScreen',
     'MainScreen',
     'ProcessMetricsScreen',

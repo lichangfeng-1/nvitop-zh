@@ -3,11 +3,11 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nvitop"
-description = "An interactive NVIDIA-GPU process viewer and beyond, the one-stop solution for GPU process management."
+name = "nvitop-zh"
+description = "Chinese-enhanced fork of nvitop: bilingual UI, PCIe link/throughput, clocks, and 8-GPU live graphs."
 readme = "README.md"
 requires-python = ">= 3.8"
-authors = [{ name = "Xuehai Pan", email = "XuehaiPan@pku.edu.cn" }]
+authors = [{ name = "Xuehai Pan", email = "XuehaiPan@pku.edu.cn" }, { name = "nvitop-zh contributors" }]
 license = { text = "Apache-2.0 AND GPL-3.0-only" }
 keywords = [
     "nvidia",
@@ -55,14 +55,14 @@ dependencies = [
 dynamic = ["version", "optional-dependencies"]
 
 [project.scripts]
-nvitop = "nvitop.cli:main"
-nvisel = "nvitop.select:main"
+nvitop-zh = "nvitop.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/XuehaiPan/nvitop"
-Repository = "https://github.com/XuehaiPan/nvitop"
+Homepage = "https://github.com/lichangfeng-1/nvitop-zh"
+Repository = "https://github.com/lichangfeng-1/nvitop-zh"
+"Bug Report" = "https://github.com/lichangfeng-1/nvitop-zh/issues"
+Upstream = "https://github.com/XuehaiPan/nvitop"
 Documentation = "https://nvitop.readthedocs.io"
-"Bug Report" = "https://github.com/XuehaiPan/nvitop/issues"
 
 [tool.setuptools.packages.find]
 include = ["nvitop", "nvitop.*"]

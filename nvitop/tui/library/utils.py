@@ -24,7 +24,7 @@ from nvitop.api import (
 from nvitop.api.host import WINDOWS as IS_WINDOWS
 from nvitop.api.host import WINDOWS_SUBSYSTEM_FOR_LINUX
 from nvitop.tui.library.host import getuser, hostname
-from nvitop.tui.library.widestring import WideString
+from nvitop.tui.library.widestring import WideString, wcslen
 
 
 __all__ = [
@@ -108,19 +108,20 @@ def make_bar_chart(
     extra_blank: str = '',
 ) -> str:
     bar_chart = f'{prefix}: '
+    reserved = wcslen(extra_text) + wcslen(extra_blank) + 1 if extra_text else 0
     if percent != NA and not (isinstance(percent, float) and not math.isfinite(percent)):
         if isinstance(percent, str) and percent.endswith('%'):
             percent = percent.replace('%', '')
             percent = float(percent) if '.' in percent else int(percent)
         percentage = max(0.0, min(float(percent) / 100.0, 1.0))
         quotient, remainder = divmod(
-            max(1, round(8 * (width - len(bar_chart) - 4) * percentage)),
+            max(1, round(8 * (width - wcslen(bar_chart) - 7 - reserved) * percentage)),
             8,
         )
         bar_chart += '█' * quotient
         if remainder > 0:
             bar_chart += ' ▏▎▍▌▋▊▉'[remainder]
-        if isinstance(percent, float) and len(f'{bar_chart} {percent:.1f}%') <= width:
+        if isinstance(percent, float) and wcslen(f'{bar_chart} {percent:.1f}%') <= width:
             text = f'{percent:.1f}%'
         else:
             text = f'{min(round(percent), 100):d}%'.replace('100%', 'MAX')  # type: ignore[arg-type]
@@ -130,18 +131,18 @@ def make_bar_chart(
             extra_text
             and 'N/A' not in extra_text.upper()
             and swap_text
-            and len(bar_chart) + len(extra_text) + 2 <= width
+            and wcslen(bar_chart) + wcslen(extra_text) + 2 <= width
         ):
             text, extra_text = extra_text, ''
-        bar_chart += '░' * (width - len(bar_chart) - len(text) - 1)
+        bar_chart += '░' * max(0, width - wcslen(bar_chart) - wcslen(text) - 1)
     if extra_text:
-        if len(f'{bar_chart} {text} {extra_blank}{extra_text}') <= width:
+        if wcslen(f'{bar_chart} {text} {extra_blank}{extra_text}') <= width:
             if swap_text:
                 text, extra_text = extra_text, text
-            return (
-                f'{bar_chart} {text}'.ljust(width - len(extra_blank) - len(extra_text) - 1)
-                + f' {extra_blank}{extra_text}'
-            )
-        if len(f'{bar_chart} {extra_text}') <= width and swap_text:
-            return f'{bar_chart} {extra_text}'.ljust(width)
-    return f'{bar_chart} {text}'.ljust(width)
+            head = f'{bar_chart} {text}'
+            head += ' ' * max(0, width - wcslen(extra_blank) - wcslen(extra_text) - 1 - wcslen(head))
+            return f'{head} {extra_blank}{extra_text}'
+        if wcslen(f'{bar_chart} {extra_text}') <= width and swap_text:
+            return f'{bar_chart} {extra_text}' + ' ' * max(0, width - wcslen(bar_chart) - wcslen(extra_text) - 1)
+    head = f'{bar_chart} {text}'
+    return head + ' ' * max(0, width - wcslen(head))

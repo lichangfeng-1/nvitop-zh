@@ -1539,6 +1539,28 @@ class Device:  # pylint: disable=too-many-instance-attributes,too-many-public-me
         return ThroughputInfo(tx=self.pcie_tx_throughput(), rx=self.pcie_rx_throughput())
 
     @memoize_when_activated
+    def pcie_link_generation(self) -> int | NaType:
+        """The current PCIe link generation, e.g. ``4`` for PCIe Gen4."""
+        if self._handle is not None:
+            return libnvml.nvmlQuery(
+                'nvmlDeviceGetCurrPcieLinkGeneration',
+                self._handle,
+                default=NA,
+            )
+        return NA
+
+    @memoize_when_activated
+    def pcie_link_width(self) -> int | NaType:
+        """The current PCIe link width, e.g. ``16`` for x16."""
+        if self._handle is not None:
+            return libnvml.nvmlQuery(
+                'nvmlDeviceGetCurrPcieLinkWidth',
+                self._handle,
+                default=NA,
+            )
+        return NA
+
+    @memoize_when_activated
     def pcie_tx_throughput(self) -> int | NaType:  # in KiB/s
         """The current PCIe transmit throughput in KiB/s.
 
@@ -2407,6 +2429,8 @@ class Device:  # pylint: disable=too-many-instance-attributes,too-many-public-me
         'pcie_rx_throughput',
         'pcie_tx_throughput_human',
         'pcie_rx_throughput_human',
+        'pcie_link_generation',
+        'pcie_link_width',
         'display_active',
         'display_mode',
         'current_driver_model',
