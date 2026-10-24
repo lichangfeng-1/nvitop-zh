@@ -275,9 +275,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             )
             if compact:
                 third = (
-                    (' PCIe 档位/速率 ', 22)
-                    if self.width >= 100
-                    else (' 利用/UTL 模式/MODE ', 22)
+                    (' PCIe 档位/速率 ', 22) if self.width >= 100 else (' 利用/UTL 模式/MODE ', 22)
                 )
                 header.append(
                     row(
@@ -471,8 +469,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'{clock_text} '
-                                    f'{device.power_status.partition(" / ")[0]}',
+                                    f'{clock_text} {device.power_status.partition(" / ")[0]}',
                                 ),
                             ],
                         ]

@@ -97,7 +97,7 @@ def cut_string(
     return str(padstr + s[-(maxlen - len(padstr)) :])
 
 
-# pylint: disable-next=too-many-arguments
+# pylint: disable-next=too-many-arguments,too-many-locals
 def make_bar_chart(
     prefix: str,
     percent: float | str,
@@ -149,12 +149,12 @@ def make_bar_chart(
     if filled:
         quotient, remainder = divmod(max(1, round(8 * bar_area * percentage)), 8)
         quotient = min(quotient, bar_area)
-        bar = '█' * quotient
+        bar_text = '█' * quotient
         if remainder > 0 and quotient < bar_area:
-            bar += ' ▏▎▍▌▋▊▉'[remainder]
+            bar_text += ' ▏▎▍▌▋▊▉'[remainder]
     else:
-        bar = '░' * bar_area
+        bar_text = '░' * bar_area
 
-    used = wcslen(bar_chart) + wcslen(bar)
+    used = wcslen(bar_chart) + wcslen(bar_text)
     padding = max(0, width - right_margin - used - tail_width)
-    return f'{bar_chart}{bar}{" " * padding}{tail}{" " * right_margin}'
+    return f'{bar_chart}{bar_text}{" " * padding}{tail}{" " * right_margin}'

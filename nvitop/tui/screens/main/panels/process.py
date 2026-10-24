@@ -409,7 +409,10 @@ class ProcessPanel(BaseSelectablePanel):  # pylint: disable=too-many-instance-at
             else:
                 message = ' 正在采集进程状态... / Gathering process status...'
             header.extend(
-                ['│ ' + _pad_display(message, self.width - 4) + ' │', '╘' + '═' * (self.width - 2) + '╛'],
+                [
+                    '│ ' + _pad_display(message, self.width - 4) + ' │',
+                    '╘' + '═' * (self.width - 2) + '╛',
+                ],
             )
         return header
 

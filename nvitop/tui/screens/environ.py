@@ -10,7 +10,7 @@ from functools import partial
 from itertools import islice
 from typing import TYPE_CHECKING, ClassVar
 
-from nvitop.tui.library import GpuProcess, HostProcess, MouseEvent, WideString, host
+from nvitop.tui.library import GpuProcess, HostProcess, MouseEvent, WideString, host, wcslen
 from nvitop.tui.screens.base import BaseScreen
 
 
@@ -21,6 +21,74 @@ if TYPE_CHECKING:
 
 
 __all__ = ['EnvironScreen']
+
+
+ENV_HINTS: dict[str, str] = {
+    'PATH': '可执行文件搜索路径',
+    'LD_LIBRARY_PATH': '动态库搜索路径',
+    'CUDA_VISIBLE_DEVICES': '可见的 GPU 编号',
+    'NVIDIA_VISIBLE_DEVICES': '容器内可见的 GPU',
+    'NVIDIA_DRIVER_CAPABILITIES': '容器可用的驱动能力',
+    'CUDA_HOME': 'CUDA 安装目录',
+    'CUDA_PATH': 'CUDA 安装目录',
+    'PYTHONPATH': 'Python 模块搜索路径',
+    'PYTHONUNBUFFERED': '关闭 Python 输出缓冲',
+    'PYTHONDONTWRITEBYTECODE': '不生成 .pyc 字节码',
+    'VIRTUAL_ENV': 'Python 虚拟环境目录',
+    'CONDA_PREFIX': 'Conda 环境目录',
+    'CONDA_DEFAULT_ENV': 'Conda 环境名',
+    'HOME': '用户主目录',
+    'USER': '当前用户名',
+    'LOGNAME': '登录用户名',
+    'SHELL': '登录 Shell',
+    'PWD': '当前工作目录',
+    'LANG': '系统语言与编码',
+    'LC_ALL': '语言与编码覆盖',
+    'TERM': '终端类型',
+    'OMP_NUM_THREADS': 'OpenMP 线程数',
+    'MKL_NUM_THREADS': 'MKL 线程数',
+    'NCCL_DEBUG': 'NCCL 调试级别',
+    'NCCL_IB_DISABLE': '禁用 NCCL InfiniBand',
+    'NCCL_SOCKET_IFNAME': 'NCCL 使用的网卡',
+    'HF_HOME': 'Hugging Face 缓存目录',
+    'HF_TOKEN': 'Hugging Face 访问令牌',
+    'TRANSFORMERS_CACHE': 'Transformers 模型缓存',
+    'TORCH_HOME': 'PyTorch 缓存目录',
+    'PYTORCH_CUDA_ALLOC_CONF': 'PyTorch 显存分配策略',
+    'VLLM_ATTENTION_BACKEND': 'vLLM 注意力后端',
+    'VLLM_USE_V1': 'vLLM v1 引擎开关',
+    'NVIDIA_TF32_OVERRIDE': 'TF32 精度覆盖',
+}
+
+ENV_PREFIX_HINTS: tuple[tuple[str, str], ...] = (
+    ('NCCL_', 'NCCL 集合通信配置'),
+    ('VLLM_', 'vLLM 配置'),
+    ('CUDA_', 'CUDA 配置'),
+    ('NVIDIA_', 'NVIDIA 配置'),
+    ('HF_', 'Hugging Face 配置'),
+    ('TORCH_', 'PyTorch 配置'),
+)
+
+
+def env_hint(key: str) -> str:
+    if key in ENV_HINTS:
+        return ENV_HINTS[key]
+    for prefix, hint in ENV_PREFIX_HINTS:
+        if key.startswith(prefix):
+            return hint
+    return ''
+
+
+def cut_display(text: str, width: int) -> str:
+    result = []
+    used = 0
+    for char in text:
+        char_width = wcslen(char)
+        if used + char_width > width:
+            break
+        result.append(char)
+        used += char_width
+    return ''.join(result)
 
 
 class EnvironScreen(BaseScreen):  # pylint: disable=too-many-instance-attributes
@@ -158,25 +226,37 @@ class EnvironScreen(BaseScreen):  # pylint: disable=too-many-instance-attributes
         self.color_reset()
 
         if isinstance(self.process, GpuProcess):
-            process_type = 'GPU: ' + self.process.type.replace('C', 'Compute').replace(
+            process_type = 'GPU ' + self.process.type.replace('C', '计算/Compute').replace(
                 'G',
-                'Graphics',
+                '图形/Graphics',
             )
         else:
-            process_type = 'Host'
+            process_type = '主机/Host'
         header_prefix = WideString(
-            f'Environment of process {self.process.pid} ({self.username}@{process_type}): ',
+            f'进程环境 / Environment: PID {self.process.pid} ({self.username}@{process_type}): ',
         )
         offset = max(0, min(self.x_offset, len(self.command) + len(header_prefix) - self.width))
-        header = str((header_prefix + self.command[offset:]).ljust(self.width)[: self.width])
+        header_text = str(header_prefix + self.command[offset:])
+        header = cut_display(header_text, self.width)
+        header += ' ' * max(0, self.width - wcslen(header))
 
         self.addstr(self.y, self.x, header)
         self.addstr(self.y + 1, self.x, '#' * self.width)
-        self.color_at(self.y, self.x, width=len(header_prefix) - 1, fg='cyan', attr='bold')
+        self.color_at(
+            self.y,
+            self.x,
+            width=max(0, wcslen(header_prefix) - 1),
+            fg='cyan',
+            attr='bold',
+        )
         self.color_at(self.y + 1, self.x, width=self.width, fg='green', attr='bold')
 
         if self.environ is None:
-            self.addstr(self.y + 2, self.x, 'Could not read process environment.')
+            self.addstr(
+                self.y + 2,
+                self.x,
+                '无法读取进程环境 / Could not read process environment.',
+            )
             self.color_at(self.y + 2, self.x, width=self.width, fg='cyan', attr='reverse')
             return
 
@@ -184,8 +264,22 @@ class EnvironScreen(BaseScreen):  # pylint: disable=too-many-instance-attributes
         items = islice(self.items, self.scroll_offset, self.scroll_offset + self.display_height)
         for y, (key, line) in enumerate(items, start=self.y + 2):
             key_length = len(key)
-            raw_line = str(line[self.x_offset :].ljust(self.width)[: self.width])
+            base = str(line[self.x_offset :])
+            hint = env_hint(str(key)) if self.x_offset == 0 else ''
+            suffix = ''
+            if hint and wcslen(base) + 4 + wcslen(hint) <= self.width:
+                suffix = f'  ┆ {hint}'
+            text = base + suffix
+            raw_line = cut_display(text, self.width)
+            raw_line += ' ' * max(0, self.width - wcslen(raw_line))
             self.addstr(y, self.x, raw_line)
+            if suffix:
+                self.color_at(
+                    y,
+                    self.x + wcslen(base) + 4,
+                    width=wcslen(hint),
+                    attr='dim',
+                )
             if self.x_offset < key_length:
                 self.color_at(y, self.x, width=key_length - self.x_offset, fg='blue', attr='bold')
             if self.x_offset < key_length + 1:

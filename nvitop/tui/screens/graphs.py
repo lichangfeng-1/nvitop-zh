@@ -1,4 +1,4 @@
-# This file is part of nvitop-zh, based on nvitop.
+# This file is part of the Chinese-enhanced fork of nvitop.
 # License: GNU GPL version 3.
 
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, ClassVar
 
-from nvitop.tui.library import NA, Device
+from nvitop.tui.library import Device, HistoryGraph
 from nvitop.tui.screens.base import BaseScreen
 
 
@@ -31,7 +31,7 @@ class GpuGraphsScreen(BaseScreen):  # pylint: disable=too-many-instance-attribut
         self.x = self.y = 0
         self.width = root.width
         self.height = 0
-        self._saved: list[tuple[object, int, int]] = []
+        self._saved: list[tuple[HistoryGraph, int, int]] = []
 
     def enter(self) -> None:
         self._saved = []
@@ -59,6 +59,7 @@ class GpuGraphsScreen(BaseScreen):  # pylint: disable=too-many-instance-attribut
         rows = max(1, math.ceil(device_count / cols))
         return cols, rows, self.width // cols, max(4, self.height // rows)
 
+    # pylint: disable-next=too-many-locals
     def draw(self) -> None:
         if not self.visible:
             return
@@ -101,7 +102,13 @@ class GpuGraphsScreen(BaseScreen):  # pylint: disable=too-many-instance-attribut
             utl_text = f'GPU{device.display_index} 利用/UTL {utilization_value:.1f}%'
 
             self.addstr(y, x + 1, mem_text)
-            self.color_at(y, x + 1, width=min(len(mem_text), cell_width - 1), fg=mem_color, attr='bold')
+            self.color_at(
+                y,
+                x + 1,
+                width=min(len(mem_text), cell_width - 1),
+                fg=mem_color,
+                attr='bold',
+            )
             for offset, line in enumerate(memory.graph, start=1):
                 if offset > graph_height:
                     break
