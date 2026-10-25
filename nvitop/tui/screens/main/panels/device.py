@@ -252,7 +252,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             compact = self.compact
 
         version_infos = [
-            'NVITOP-zh {}'.format(__version__.partition('+')[0]),
+            f'NVITOP-zh {__version__}',
             f'驱动/Driver: {self.driver_version}',
             f'CUDA驱动: {self.cuda_driver_version}',
         ]
