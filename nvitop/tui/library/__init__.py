@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-module-docstring
 
+from nvitop.api.cpuinfo import cpu_frequency, cpu_temperature
 from nvitop.tui.library import host
 from nvitop.tui.library.device import Device, MigDevice
 from nvitop.tui.library.displayable import Displayable, DisplayableContainer
@@ -88,6 +89,8 @@ __all__ = [
     'WideString',
     'bytes2human',
     'colored',
+    'cpu_frequency',
+    'cpu_temperature',
     'cut_string',
     'host',
     'libcurses',

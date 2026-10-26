@@ -19,6 +19,8 @@ from nvitop.tui.library import (
     NaType,
     bytes2human,
     colored,
+    cpu_frequency,
+    cpu_temperature,
     host,
     make_bar_chart,
     timedelta2human,
@@ -34,6 +36,14 @@ if TYPE_CHECKING:
 
 
 __all__ = ['HostPanel']
+
+
+def cpu_detail() -> str:
+    current, _ = cpu_frequency()
+    temperature = cpu_temperature()
+    frequency = f'{current / 1000:.2f}GHz' if isinstance(current, (int, float)) else 'N/A'
+    temperature_text = f'{temperature}C' if isinstance(temperature, int) else 'N/A'
+    return f'{frequency} {temperature_text}'
 
 
 class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
@@ -279,8 +289,11 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
     def draw(self) -> None:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         self.color_reset()
 
-        load_average = '负载/Load: {} {} {}'.format(
+        uptime_text = timedelta2human(host.uptime(), round=True)
+        cpu_text = cpu_detail()
+        load_average = '负载/Load: {} {} {} | 运行/Uptime: {}'.format(
             *(f'{value:5.2f}'[:5] if value < 10000.0 else '9999+' for value in self.load_average),
+            uptime_text,
         )
 
         if self.compact:
@@ -291,7 +304,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                     'CPU',
                     self.cpu_percent,
                     width_left - 4,
-                    extra_text=f'运行/Uptime: {timedelta2human(host.uptime(), round=True)}',
+                    extra_text=f'CPU {cpu_text}',
                     extra_blank=' ',
                 ),
             )
@@ -325,6 +338,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             )
             return
 
+        load_average = f'{load_average} | CPU {cpu_text}'
         remaining_width = self.width - 79
 
         if self.need_redraw:
@@ -429,8 +443,11 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         self.swap_memory = host.swap_memory()
         self.load_average = host.load_average()
 
-        load_average = '负载/Load: {} {} {}'.format(
+        uptime_text = timedelta2human(host.uptime(), round=True)
+        cpu_text = cpu_detail()
+        load_average = '负载/Load: {} {} {} | 运行/Uptime: {}'.format(
             *(f'{value:5.2f}'[:5] if value < 10000.0 else '9999+' for value in self.load_average),
+            uptime_text,
         )
 
         width_right = wcslen(load_average) + 4
@@ -440,7 +457,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 'CPU',
                 self.cpu_percent,
                 width_left - 4,
-                extra_text=f'运行/Uptime: {timedelta2human(host.uptime(), round=True)}',
+                extra_text=f'CPU {cpu_text}',
                 extra_blank=' ',
             ),
         )

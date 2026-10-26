@@ -453,6 +453,12 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                             if isinstance(sm_clock, (int, float))
                             else 'N/A'
                         )
+                        memory_clock = device.clock_infos.memory
+                        memory_clock_text = (
+                            f'显存{memory_clock / 1000:.1f}G'
+                            if isinstance(memory_clock, (int, float))
+                            else ''
+                        )
                         matrix = [
                             [
                                 (
@@ -461,7 +467,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'MEM',
                                     device.memory_percent,
                                     device.memory_display_color,
-                                    '',
+                                    memory_clock_text,
                                 ),
                                 (
                                     self.x + 80 + left_width + 3,
@@ -469,7 +475,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'{clock_text} {device.power_status.partition(" / ")[0]}',
+                                    f'SM{clock_text} {device.power_status.partition(" / ")[0]}',
                                 ),
                             ],
                         ]
@@ -495,10 +501,20 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 else:
                     if remaining_width >= 44:
                         memory_utilization = device.memory_utilization
+                        sm_clock = device.clock_infos.sm
+                        max_sm_clock = device.max_clock_infos.sm
+                        sm_clock_text = (
+                            f'{sm_clock / 1000:.2f}/{max_sm_clock / 1000:.2f}G'
+                            if isinstance(sm_clock, (int, float))
+                            and isinstance(max_sm_clock, (int, float))
+                            else 'N/A'
+                        )
                         memory_extra = device.memory_used_human
                         if isinstance(memory_utilization, (int, float)):
                             memory_extra += f' BW {memory_utilization:.0f}%'
-                        memory_extra += f' {device.clock_infos.memory}MHz'
+                        memory_clock = device.clock_infos.memory
+                        if isinstance(memory_clock, (int, float)):
+                            memory_extra += f' 显存{memory_clock / 1000:.1f}G'
                         matrix = [
                             [
                                 (
@@ -517,8 +533,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'{device.power_status} '
-                                    f'{device.clock_infos.sm}/{device.max_clock_infos.sm}MHz',
+                                    f'{device.power_status} SM{sm_clock_text}',
                                 ),
                             ],
                         ]
