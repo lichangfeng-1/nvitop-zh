@@ -1,7 +1,7 @@
 # This file is part of the Chinese-enhanced fork of nvitop.
 # License: GNU GPL version 3.
 
-"""Linux CPU frequency and temperature helpers backed by sysfs."""
+"""Linux CPU frequency and temperature helpers."""
 
 # pylint: disable=missing-module-docstring
 
