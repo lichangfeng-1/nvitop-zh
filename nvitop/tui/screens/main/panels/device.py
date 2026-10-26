@@ -80,7 +80,11 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         self._compact: bool = compact
         self.width: int = max(79, root.width)
         self.compact_height: int = (
-            4 + 2 * (self.device_count + 1) + self.mig_device_count + self.mig_enabled_device_count
+            4
+            + 2 * (self.device_count + 1)
+            + self.device_count
+            + self.mig_device_count
+            + self.mig_enabled_device_count
         )
         self.full_height: int = self.compact_height + self.device_count + 1
         self.height: int = self.compact_height if compact else self.full_height
@@ -338,9 +342,9 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         if self.device_count > 0:
             for mig_device_count in self.mig_device_counts:
                 if compact:
-                    frame.extend((data_line, separator_line))
-                else:
                     frame.extend((data_line, data_line, separator_line))
+                else:
+                    frame.extend((data_line, data_line, data_line, separator_line))
                 if mig_device_count > 0:
                     frame.extend((data_line,) * mig_device_count + (separator_line,))
 
@@ -364,6 +368,36 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         self.snapshots = self._snapshot_buffer
 
         super().poke()
+
+    def _draw_frequency_line(self, y: int, device: Snapshot, attr: int | str) -> None:
+        sm_clock = device.clock_infos.sm
+        max_sm_clock = device.max_clock_infos.sm
+        memory_clock = device.clock_infos.memory
+        if isinstance(sm_clock, (int, float)):
+            sm_text = (
+                f'核心 SM {sm_clock:.0f}/{max_sm_clock:.0f}MHz'
+                if isinstance(max_sm_clock, (int, float))
+                else f'核心 SM {sm_clock:.0f}MHz'
+            )
+        else:
+            sm_text = '核心 SM N/A'
+        memory_text = (
+            f'显存 {memory_clock:.0f}MHz' if isinstance(memory_clock, (int, float)) else '显存 N/A'
+        )
+        bandwidth_text = ''
+        line = (
+            '│'
+            + _pad_display(' ' + sm_text, 31)
+            + '│'
+            + _pad_display(' ' + memory_text, 22)
+            + '│'
+            + _pad_display(' ' + bandwidth_text, 22)
+            + '│'
+        )
+        self.addstr(y, self.x, line)
+        self.color_at(y, self.x + 1, width=31, fg=device.display_color, attr=attr)
+        self.color_at(y, self.x + 33, width=22, fg=device.display_color, attr=attr)
+        self.color_at(y, self.x + 56, width=22, fg=device.display_color, attr=attr)
 
     # pylint: disable-next=too-many-locals,too-many-branches,too-many-statements
     def draw(self) -> None:
@@ -426,6 +460,9 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                         attr='bold' if isinstance(temperature, int) and temperature >= 85 else attr,
                     )
 
+            if not device.is_mig_device:
+                self._draw_frequency_line(y_start + len(fmts), device, attr)
+
             if draw_bars:
                 left_width = (remaining_width - 6 + 1) // 2 - 1
                 right_width = (remaining_width - 6) // 2 + 1
@@ -447,16 +484,6 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                         self.addstr(y_start - 1, self.x + 80 + left_width + 1, '┴')
                 elif self.compact:
                     if remaining_width >= 44:
-                        sm_clock = device.clock_infos.sm
-                        clock_text = (
-                            f'{sm_clock:.0f}MHz' if isinstance(sm_clock, (int, float)) else 'N/A'
-                        )
-                        memory_clock = device.clock_infos.memory
-                        memory_clock_text = (
-                            f'显存{memory_clock:.0f}MHz'
-                            if isinstance(memory_clock, (int, float))
-                            else ''
-                        )
                         matrix = [
                             [
                                 (
@@ -465,7 +492,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'MEM',
                                     device.memory_percent,
                                     device.memory_display_color,
-                                    memory_clock_text,
+                                    '',
                                 ),
                                 (
                                     self.x + 80 + left_width + 3,
@@ -473,7 +500,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'SM{clock_text}',
+                                    '',
                                 ),
                             ],
                         ]
@@ -482,7 +509,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                             separator = '┬'
                         self.addstr(y_start - 1, self.x + 80 + left_width + 1, separator)
                         if index == len(self.snapshots) - 1:
-                            self.addstr(y_start + 1, self.x + 80 + left_width + 1, '╧')
+                            self.addstr(y_start + 3, self.x + 80 + left_width + 1, '╧')
                     else:
                         matrix = [
                             [
@@ -499,20 +526,9 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 else:
                     if remaining_width >= 44:
                         memory_utilization = device.memory_utilization
-                        sm_clock = device.clock_infos.sm
-                        max_sm_clock = device.max_clock_infos.sm
-                        sm_clock_text = (
-                            f'{sm_clock:.0f}/{max_sm_clock:.0f}MHz'
-                            if isinstance(sm_clock, (int, float))
-                            and isinstance(max_sm_clock, (int, float))
-                            else 'N/A'
-                        )
                         memory_extra = device.memory_used_human
                         if isinstance(memory_utilization, (int, float)):
                             memory_extra += f' BW {memory_utilization:.0f}%'
-                        memory_clock = device.clock_infos.memory
-                        if isinstance(memory_clock, (int, float)):
-                            memory_extra += f' 显存{memory_clock:.0f}MHz'
                         matrix = [
                             [
                                 (
@@ -531,7 +547,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                                     'UTL',
                                     device.gpu_utilization,
                                     device.gpu_display_color,
-                                    f'SM{sm_clock_text}',
+                                    '',
                                 ),
                             ],
                         ]
@@ -591,7 +607,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                         else:
                             self.color_at(y, x_offset, width=width, fg=color, attr=attr)
 
-            y_start += len(fmts)
+            y_start += len(fmts) + (0 if device.is_mig_device else 1)
             prev_device_index = device.tuple_index
 
     def destroy(self) -> None:
