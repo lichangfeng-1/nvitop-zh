@@ -1,6 +1,6 @@
 # nvitop-zh
 
-基于 [nvitop](https://github.com/XuehaiPan/nvitop) v1.7.1 的中文增强派生版，当前 v1.0.5。
+基于 [nvitop](https://github.com/XuehaiPan/nvitop) v1.7.1 的中文增强派生版，当前 v1.0.6。
 
 面向 NVIDIA GPU 的交互式监视器：保留 nvitop 的彩色进度条与进程管理能力，补上 nvtop 常见的频率、PCIe 档位与实时收发速率，并把主界面做成中英双语。
 

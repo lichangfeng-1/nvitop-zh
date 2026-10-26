@@ -384,14 +384,13 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         memory_text = (
             f'显存 {memory_clock:.0f}MHz' if isinstance(memory_clock, (int, float)) else '显存 N/A'
         )
-        bandwidth_text = ''
         line = (
             '│'
-            + _pad_display(' ' + sm_text, 31)
+            + _pad_display(sm_text + ' ', 31, align='right')
             + '│'
-            + _pad_display(' ' + memory_text, 22)
+            + _pad_display(memory_text + ' ', 22, align='right')
             + '│'
-            + _pad_display(' ' + bandwidth_text, 22)
+            + _pad_display(' ', 22)
             + '│'
         )
         self.addstr(y, self.x, line)
