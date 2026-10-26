@@ -449,9 +449,7 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                     if remaining_width >= 44:
                         sm_clock = device.clock_infos.sm
                         clock_text = (
-                            f'{sm_clock:.0f}MHz'
-                            if isinstance(sm_clock, (int, float))
-                            else 'N/A'
+                            f'{sm_clock:.0f}MHz' if isinstance(sm_clock, (int, float)) else 'N/A'
                         )
                         memory_clock = device.clock_infos.memory
                         memory_clock_text = (
