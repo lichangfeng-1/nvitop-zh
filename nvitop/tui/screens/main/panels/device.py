@@ -384,13 +384,18 @@ class DevicePanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         memory_text = (
             f'显存 {memory_clock:.0f}MHz' if isinstance(memory_clock, (int, float)) else '显存 N/A'
         )
+        encoder = device.encoder_utilization
+        decoder = device.decoder_utilization
+        encoder_text = f'{encoder:.0f}%' if isinstance(encoder, (int, float)) else 'N/A'
+        decoder_text = f'{decoder:.0f}%' if isinstance(decoder, (int, float)) else 'N/A'
+        codec_text = f'ENC {encoder_text} DEC {decoder_text}'
         line = (
             '│'
             + _pad_display(sm_text + ' ', 31, align='right')
             + '│'
             + _pad_display(memory_text + ' ', 22, align='right')
             + '│'
-            + _pad_display(' ', 22)
+            + _pad_display(codec_text + ' ', 22, align='right')
             + '│'
         )
         self.addstr(y, self.x, line)
