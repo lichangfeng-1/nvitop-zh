@@ -313,7 +313,10 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                     'MEM',
                     self.virtual_memory.percent,
                     width_left - 4,
-                    extra_text=f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}',
+                    extra_text=(
+                        f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}'
+                        f' / {bytes2human(self.virtual_memory.total, min_unit=GiB)}'
+                    ),
                     extra_blank=' ',
                 ),
             )
@@ -412,7 +415,8 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             self.y + 9,
             self.x + 1,
             (
-                f' MEM: {bytes2human(self.memory_used(), min_unit=GiB)} '
+                f' MEM: {bytes2human(self.memory_used(), min_unit=GiB)}'
+                f' / {bytes2human(self.virtual_memory.total, min_unit=GiB)} '
                 f'({host.virtual_memory.history}) '  # type: ignore[attr-defined]
             ),
         )
@@ -469,7 +473,10 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 'MEM',
                 self.virtual_memory.percent,
                 width_left - 4,
-                extra_text=f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}',
+                extra_text=(
+                    f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}'
+                    f' / {bytes2human(self.virtual_memory.total, min_unit=GiB)}'
+                ),
                 extra_blank=' ',
             ),
         )
