@@ -313,7 +313,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                     'MEM',
                     self.virtual_memory.percent,
                     width_left - 4,
-                    extra_text=f'已用/Used: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
+                    extra_text=f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}',
                     extra_blank=' ',
                 ),
             )
@@ -412,7 +412,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
             self.y + 9,
             self.x + 1,
             (
-                f' MEM: {bytes2human(self.virtual_memory.used, min_unit=GiB)} '
+                f' MEM: {bytes2human(self.memory_used(), min_unit=GiB)} '
                 f'({host.virtual_memory.history}) '  # type: ignore[attr-defined]
             ),
         )
@@ -427,6 +427,9 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
         if self.width >= 100:
             self.addstr(self.y, self.x + 79, f' {gpu_memory_percent} ')
             self.addstr(self.y + 10, self.x + 79, f' {gpu_utilization} ')
+
+    def memory_used(self) -> int:
+        return self.virtual_memory.total - self.virtual_memory.available
 
     def destroy(self) -> None:
         super().destroy()
@@ -466,7 +469,7 @@ class HostPanel(BasePanel):  # pylint: disable=too-many-instance-attributes
                 'MEM',
                 self.virtual_memory.percent,
                 width_left - 4,
-                extra_text=f'已用/Used: {bytes2human(self.virtual_memory.used, min_unit=GiB)}',
+                extra_text=f'已用/Used: {bytes2human(self.memory_used(), min_unit=GiB)}',
                 extra_blank=' ',
             ),
         )
