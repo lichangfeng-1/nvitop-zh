@@ -172,8 +172,10 @@ class Device(DeviceBase):  # pylint: disable=too-many-public-methods
         def rate(value: int | NaType) -> str:
             if not libnvml.nvmlCheckReturn(value, int):
                 return NA
+            if value >= 1024 * 1024:
+                return f'{value / (1024 * 1024):.1f}G'
             if value >= 1024:
-                return f'{value / 1024:.1f}M'
+                return f'{value / 1024:.0f}M'
             return f'{value:.0f}K'
 
         link = (
